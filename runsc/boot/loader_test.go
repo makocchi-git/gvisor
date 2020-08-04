@@ -47,12 +47,15 @@ func init() {
 }
 
 func testConfig() *config.Config {
-	return &config.Config{
-		RootDir:        "unused_root_dir",
-		Network:        config.NetworkNone,
-		DisableSeccomp: true,
-		Platform:       "ptrace",
+	conf, err := config.NewFromFlags()
+	if err != nil {
+		panic(err)
 	}
+	// Change test defaults.
+	conf.RootDir = "unused_root_dir"
+	conf.Network = config.NetworkNone
+	conf.DisableSeccomp = true
+	return conf
 }
 
 // testSpec returns a simple spec that can be used in tests.
@@ -546,7 +549,7 @@ func TestRestoreEnvironment(t *testing.T) {
 						{
 							Dev:        "9pfs-/",
 							Flags:      fs.MountSourceFlags{ReadOnly: true},
-							DataString: "trans=fd,rfdno=0,wfdno=0,privateunixsocket=true,cache=remote_revalidating",
+							DataString: "trans=fd,rfdno=0,wfdno=0,privateunixsocket=true",
 						},
 					},
 					"tmpfs": {
@@ -600,7 +603,7 @@ func TestRestoreEnvironment(t *testing.T) {
 						{
 							Dev:        "9pfs-/",
 							Flags:      fs.MountSourceFlags{ReadOnly: true},
-							DataString: "trans=fd,rfdno=0,wfdno=0,privateunixsocket=true,cache=remote_revalidating",
+							DataString: "trans=fd,rfdno=0,wfdno=0,privateunixsocket=true",
 						},
 						{
 							Dev:        "9pfs-/dev/fd-foo",
@@ -658,7 +661,7 @@ func TestRestoreEnvironment(t *testing.T) {
 						{
 							Dev:        "9pfs-/",
 							Flags:      fs.MountSourceFlags{ReadOnly: true},
-							DataString: "trans=fd,rfdno=0,wfdno=0,privateunixsocket=true,cache=remote_revalidating",
+							DataString: "trans=fd,rfdno=0,wfdno=0,privateunixsocket=true",
 						},
 					},
 					"tmpfs": {
