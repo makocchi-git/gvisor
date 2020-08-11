@@ -80,10 +80,14 @@ type PacketBuffer struct {
 	// data are held in the same underlying buffer storage.
 	header buffer.Prependable
 
-	// NetworkProtocol is only valid when NetworkHeader is set.
+	// NetworkProtocol is only valid when NetworkHeader() returns non nil.
 	// TODO(gvisor.dev/issue/3574): Remove the separately passed protocol
 	// numbers in registration APIs that take a PacketBuffer.
 	NetworkProtocolNumber tcpip.NetworkProtocolNumber
+
+	// TransportProtocol is only valid when NetworkHeader() returns non nil.
+	// This means Parse has been called.
+	TransportProtocolNumber tcpip.TransportProtocolNumber
 
 	// Hash is the transport layer hash of this packet. A value of zero
 	// indicates no valid hash has been set.

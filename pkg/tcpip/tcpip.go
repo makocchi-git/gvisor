@@ -1739,3 +1739,49 @@ func DeleteDanglingEndpoint(e Endpoint) {
 // AsyncLoading is the global barrier for asynchronous endpoint loading
 // activities.
 var AsyncLoading sync.WaitGroup
+
+// ICMPReason is an interface that allows callers of the network protocol
+// ReturnError method to identify the reason they want to create an error
+// message to the original sender of the received packet. The appropriate
+// network protocol will decide on exactly what message will be sent. Each
+// type that supports this interface represents a separate reason and may
+// include reason specific information.
+// This does not need to include all ICMP types, just those we need to use in
+// a network protocol agnostic way. Used for both IP versions 4 and 6.
+// If a new entry is added here support for it should be added in the
+// ReturnError function for each network protocol.
+// ICMPReason has a single private dummy interface method so nothing outside
+// of this package may implement it.
+type ICMPReason interface {
+	isICMP()
+}
+
+// In each of the following types, isICMP implements ICMPReason.isICMP.
+// Its only reason is to make these structs be implementations of the ICMPReason
+// interface and to ensure that all ICMPReason definitions must be in this file.
+
+// ICMPReasonTimeExceeded is an error due to a packet's TTL/hop-count reaching 0
+type ICMPReasonTimeExceeded struct{}
+
+func (ICMPReasonTimeExceeded) isICMP() {}
+
+// ICMPParameterProblem is an error due to invalid fields in a packet.
+type ICMPParameterProblem struct{ Pointer uint32 }
+
+func (ICMPParameterProblem) isICMP() {}
+
+// ICMPReasonDstUnreachable is an error where the packet can not be forwarded.
+type ICMPReasonDstUnreachable struct{}
+
+func (ICMPReasonDstUnreachable) isICMP() {}
+
+// ICMPReasonPortUnreachable ia an error if the port requested is not opened.
+type ICMPReasonPortUnreachable struct{}
+
+func (ICMPReasonPortUnreachable) isICMP() {}
+
+// ICMPReasonProtoUnreachable is an error where the packet has a protocol field
+// that we don't recognise.
+type ICMPReasonProtoUnreachable struct{ Pointer uint32 }
+
+func (ICMPReasonProtoUnreachable) isICMP() {}

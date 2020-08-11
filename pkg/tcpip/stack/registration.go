@@ -147,14 +147,15 @@ type TransportProtocol interface {
 	ParsePorts(v buffer.View) (src, dst uint16, err *tcpip.Error)
 
 	// HandleUnknownDestinationPacket handles packets targeted at this
-	// protocol but that don't match any existing endpoint. For example,
-	// it is targeted at a port that have no listeners.
+	// protocol that don't match any existing endpoint. For example,
+	// it is targeted at a port that has no listeners.
 	//
-	// The return value indicates whether the packet was well-formed (for
-	// stats purposes only).
+	// Return values:
+	// wellFormed is false if the packet was not well formed.
+	// handled is true if the transport protocol handled the issue.
 	//
 	// HandleUnknownDestinationPacket takes ownership of pkt.
-	HandleUnknownDestinationPacket(r *Route, id TransportEndpointID, pkt *PacketBuffer) bool
+	HandleUnknownDestinationPacket(r *Route, id TransportEndpointID, pkt *PacketBuffer) (wellFormed bool, handled bool)
 
 	// SetOption allows enabling/disabling protocol specific features.
 	// SetOption returns an error if the option is not supported or the
@@ -324,6 +325,16 @@ type NetworkProtocol interface {
 	//   does not encapsulate anything).
 	// - Whether pkt.Data was large enough to parse and set pkt.NetworkHeader.
 	Parse(pkt *PacketBuffer) (proto tcpip.TransportProtocolNumber, hasTransportHdr bool, ok bool)
+
+	// ReturnError attempts to send a suitable error message to the sender
+	// of a received packet.
+	// pkt holds the problematic packet.
+	// reason indicates what the reason for wanting a message is.
+	// Parameter route contains information on the source of the problem
+	// packet and how the reply should be sent.
+	// ReturnError returns a boolean indicating whether the error was
+	// successfully handled.
+	ReturnError(r *Route, reason tcpip.ICMPReason, pkt *PacketBuffer) bool
 }
 
 // NetworkDispatcher contains the methods used by the network stack to deliver
