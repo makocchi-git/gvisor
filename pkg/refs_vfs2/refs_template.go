@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package refs_template defines a template that can be used by reference counted
-// objects.
+// Package refs_template defines a template that can be used by reference
+// counted objects. The "owner" template parameter is used in log messages to
+// indicate the type of reference-counted object that exhibited a reference
+// leak. As a result, structs that are embedded in other structs should not use
+// this template, since it will make tracking down leaks more difficult.
 package refs_template
 
 import (
+	"fmt"
 	"runtime"
 	"sync/atomic"
 
@@ -82,7 +86,7 @@ func (r *Refs) ReadRefs() int64 {
 //go:nosplit
 func (r *Refs) IncRef() {
 	if v := atomic.AddInt64(&r.refCount, 1); v <= 0 {
-		panic("Incrementing non-positive ref count")
+		panic(fmt.Sprintf("Incrementing non-positive ref count %p owned by %T", r, ownerType))
 	}
 }
 
@@ -122,7 +126,7 @@ func (r *Refs) TryIncRef() bool {
 func (r *Refs) DecRef(destroy func()) {
 	switch v := atomic.AddInt64(&r.refCount, -1); {
 	case v < -1:
-		panic("Decrementing non-positive ref count")
+		panic(fmt.Sprintf("Decrementing non-positive ref count %p, owned by %T", r, ownerType))
 
 	case v == -1:
 		// Call the destructor.
