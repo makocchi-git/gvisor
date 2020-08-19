@@ -607,49 +607,51 @@ func (i *inode) listxattr(size uint64) ([]string, error) {
 }
 
 func (i *inode) getxattr(creds *auth.Credentials, opts *vfs.GetxattrOptions) (string, error) {
-	if err := i.checkPermissions(creds, vfs.MayRead); err != nil {
+	if err := i.checkXattrPermissions(creds, opts.Name, false /* write */); err != nil {
 		return "", err
-	}
-	if !strings.HasPrefix(opts.Name, linux.XATTR_USER_PREFIX) {
-		return "", syserror.EOPNOTSUPP
-	}
-	if !i.userXattrSupported() {
-		return "", syserror.ENODATA
 	}
 	return i.xattrs.Getxattr(opts)
 }
 
 func (i *inode) setxattr(creds *auth.Credentials, opts *vfs.SetxattrOptions) error {
-	if err := i.checkPermissions(creds, vfs.MayWrite); err != nil {
+	if err := i.checkXattrPermissions(creds, opts.Name, true /* write */); err != nil {
 		return err
-	}
-	if !strings.HasPrefix(opts.Name, linux.XATTR_USER_PREFIX) {
-		return syserror.EOPNOTSUPP
-	}
-	if !i.userXattrSupported() {
-		return syserror.EPERM
 	}
 	return i.xattrs.Setxattr(opts)
 }
 
 func (i *inode) removexattr(creds *auth.Credentials, name string) error {
-	if err := i.checkPermissions(creds, vfs.MayWrite); err != nil {
+	if err := i.checkXattrPermissions(creds, name, true /* write */); err != nil {
 		return err
-	}
-	if !strings.HasPrefix(name, linux.XATTR_USER_PREFIX) {
-		return syserror.EOPNOTSUPP
-	}
-	if !i.userXattrSupported() {
-		return syserror.EPERM
 	}
 	return i.xattrs.Removexattr(name)
 }
 
-// Extended attributes in the user.* namespace are only supported for regular
-// files and directories.
-func (i *inode) userXattrSupported() bool {
-	filetype := linux.S_IFMT & atomic.LoadUint32(&i.mode)
-	return filetype == linux.S_IFREG || filetype == linux.S_IFDIR
+func (i *inode) checkXattrPermissions(creds *auth.Credentials, name string, write bool) error {
+	if write {
+		if err := i.checkPermissions(creds, vfs.MayWrite); err != nil {
+			return err
+		}
+	}
+
+	switch {
+	case strings.HasPrefix(name, linux.XATTR_TRUSTED_PREFIX):
+		// The trusted.* namespace can only be accessed by privileged
+		// users.
+		if creds.HasCapability(linux.CAP_SYS_ADMIN) {
+			return nil
+		}
+		return syserror.EPERM
+	case strings.HasPrefix(name, linux.XATTR_USER_PREFIX):
+		// Extended attributes in the user.* namespace are only
+		// supported for regular files and directories.
+		filetype := linux.S_IFMT & atomic.LoadUint32(&i.mode)
+		if filetype == linux.S_IFREG || filetype == linux.S_IFDIR {
+			return nil
+		}
+		return syserror.EPERM
+	}
+	return syserror.EOPNOTSUPP
 }
 
 // fileDescription is embedded by tmpfs implementations of
