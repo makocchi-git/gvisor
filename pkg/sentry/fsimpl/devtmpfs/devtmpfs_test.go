@@ -61,7 +61,7 @@ func TestDevtmpfs(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("failed to create mount point: %v", err)
 	}
-	if err := vfsObj.MountAt(ctx, creds, "devtmpfs" /* source */, &devpop, "devtmpfs" /* fsTypeName */, &vfs.MountOptions{}); err != nil {
+	if _, err := vfsObj.MountAt(ctx, creds, "devtmpfs" /* source */, &devpop, "devtmpfs" /* fsTypeName */, &vfs.MountOptions{}); err != nil {
 		t.Fatalf("failed to mount devtmpfs: %v", err)
 	}
 
