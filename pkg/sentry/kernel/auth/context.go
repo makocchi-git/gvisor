@@ -34,3 +34,23 @@ func CredentialsFromContext(ctx context.Context) *Credentials {
 	}
 	return NewAnonymousCredentials()
 }
+
+// WithCreds returns a copy of ctx carrying creds.
+func WithCreds(ctx context.Context, creds *Credentials) context.Context {
+	return &authContext{ctx, creds}
+}
+
+type authContext struct {
+	context.Context
+	creds *Credentials
+}
+
+// Value implements context.Context.
+func (ac *authContext) Value(key interface{}) interface{} {
+	switch key {
+	case CtxCredentials:
+		return ac.creds
+	default:
+		return ac.Context.Value(key)
+	}
+}
